@@ -1,0 +1,7 @@
+# Repo Diary
+
+We have accomplished the following so far:
+
+- Added a `.gitignore` file tailored for a Next.js + React + TypeScript PWA project.
+- Installed runtime and development dependencies for the PWA.
+- Added initial source files and configurations for the project.
