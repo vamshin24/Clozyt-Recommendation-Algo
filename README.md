@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Clozyt Recommendation Demo
 
-## Getting Started
+A swipe-to-shop prototype built with Next.js (App Router) that streams curated product packets, captures user feedback, and closes the loop with a Qdrant vector search backend. The app ships as a progressive web app with offline-friendly caching, persistent client state, and tooling to embed catalog data before ingestion.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Swipe deck with gesture + keyboard controls, batched prefetching, and inline filters for gender, price, brand, and size.
+- Feedback pipeline that buffers interactions (likes, dislikes, add-to-cart) and updates in-memory user centroids to steer future packets.
+- Qdrant-powered retrieval with popularity-based fallbacks, seen-item deduping, and adaptive top-M selection per user.
+- PWA setup (service worker, manifest, installable icons) with caching strategies for navigation, APIs, and remote product imagery.
+- Tooling to embed catalog data with Fashion-CLIP/OpenCLIP and upsert vectors + payloads into Qdrant.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Prerequisites
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Node.js 20.x (or newer) and npm 10+
+- Docker (for the bundled Qdrant instance) or an existing Qdrant deployment
+- Python 3.10+ with `pip` and a working `torch` install (CUDA optional) for the embedding script
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Quick Start
 
-## Learn More
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. **Provision environment variables** – create `.env.local` and set:
+   ```bash
+   QDRANT_URL=http://localhost:6333
+   QDRANT_COLLECTION=clozyt-items
+   QDRANT_VECTOR_NAME=fashion_clip
+   QDRANT_VECTOR_DIM=512
+   ```
+   Adjust the values if you are targeting a different collection/vector name or dimensionality.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. **Run Qdrant locally**
+   ```bash
+   docker-compose up -d
+   ```
+   Data is persisted to `./qdrant_storage/` so you can stop/restart the container without losing vectors.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **Embed and upsert catalog items** (optional, but required for fresh Qdrant instances)
+   ```bash
+   python scripts/embed_and_upsert.py \
+     --input src/mock/items.json \
+     --collection "$QDRANT_COLLECTION" \
+     --vector-name "$QDRANT_VECTOR_NAME" \
+     --dim "$QDRANT_VECTOR_DIM"
+   ```
+   Add `--dry-run` to skip writes and inspect generated embeddings/payloads under `artifacts/`. The script will prefer Fashion-CLIP; it falls back to OpenCLIP if the fashion-specific weights are unavailable.
 
-## Deploy on Vercel
+5. **Start the Next.js dev server**
+   ```bash
+   npm run dev
+   ```
+   Then open http://localhost:3000. The items page automatically pulls the next packet from `/api/recs/next` and streams feedback events back to `/api/feedback`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Useful Commands
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run lint` – Run eslint with the project configuration.
+- `npm run build` – Create a production build (useful before deploying or verifying the PWA output).
+- `docker-compose down` – Stop the local Qdrant container.
+
+## Data & Assets
+
+- Primary mock catalog: `src/mock/items.json`
+- Additional staged items: `src/mock/temp.json`
+- Spreadsheet source (pre-clean merge): `Combined_Cleaned_Data.xlsx`
+- PWA icons + manifest: `public/icons/`, `public/manifest.json`
+
+## Notes
+
+- The recommendation API runs in the Node.js runtime to access the Qdrant REST client.
+- Client-side stores use Zustand with localStorage keyed persistence; `ClearPersistedState` ensures legacy keys are cleared on first load after deployments.
+- Logs are verbose in non-production mode to aid debugging of packet contents, swipe flushing, and storage resets.
