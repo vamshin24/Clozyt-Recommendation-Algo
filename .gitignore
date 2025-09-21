@@ -20,9 +20,23 @@
 # production
 /build
 
+# qdrant vector storage
+/qdrant_storage/
+
+# embedding artifacts
+/artifacts/
+*.npy
+*.ndjson
+
 # misc
 .DS_Store
 *.pem
+.vscode/
+.idea/
+.venv/
+.venv-*/
+__pycache__/
+*.py[cod]
 
 # debug
 npm-debug.log*
