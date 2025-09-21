@@ -1,14 +1,33 @@
+"use client";
+
+import { instantBuy } from "../../lib/recs";
+import { useLikesStore, useUserStore } from "../../lib/store";
+
 const LikedList = () => {
+  const likes = useLikesStore((state) => state.likes);
+  const userId = useUserStore((state) => state.userId);
+
+  if (!likes.length) {
+    return <p className="text-sm text-gray-500">No liked items yet.</p>;
+  }
+
+  const handleInstantBuy = async (itemId: string) => {
+    await instantBuy(userId, itemId);
+  };
+
   return (
-    <ul className="space-y-4">
-      {/* Placeholder for liked items */}
-      {[...Array(5)].map((_, index) => (
+    <ul className="space-y-3">
+      {likes.map((item) => (
         <li
-          key={index}
-          className="p-4 bg-gray-100 rounded-md shadow-md flex justify-between items-center"
+          key={item.item_id}
+          className="flex items-center justify-between rounded-md bg-gray-100 px-4 py-3 text-sm shadow"
         >
-          <span>Liked Item {index + 1}</span>
-          <button className="px-2 py-1 bg-indigo-600 text-white rounded-md">
+          <span className="font-medium text-gray-800">{item.title}</span>
+          <button
+            type="button"
+            onClick={() => handleInstantBuy(item.item_id)}
+            className="rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-600"
+          >
             Instant Buy
           </button>
         </li>

@@ -1,24 +1,152 @@
 [
-  {
-    "item_id": "1",
-    "title": "Red T-Shirt",
-    "brand": "Brand A",
-    "price_usd": 19.99,
-    "image_url": "/images/red-tshirt.jpg",
-    "attributes": {
-      "color": "Red",
-      "size": "M"
-    }
-  },
-  {
-    "item_id": "2",
-    "title": "Blue Jeans",
-    "brand": "Brand B",
-    "price_usd": 49.99,
-    "image_url": "/images/blue-jeans.jpg",
-    "attributes": {
-      "color": "Blue",
-      "size": "32"
-    }
-  }
+{
+"item_id": "1-1859-000001-0124",
+"title": "Wool Blend Fringe Detail Coat",
+"brand": "Olivia TPS x NA-KD",
+"price_usd": 209.95,
+"image_url": "https://www.na-kd.com/cdn-cgi/image/width=300,quality=80,sharpen=0.3/globalassets/wool_blend_fringe_detail_coat_1859-000001-0124_3_campaign.jpg?ref=7321AF56DE",
+"category": "coat",
+"tags": ["camel","beige"],
+"attributes": {
+ "color": "Camel",
+ "product_url": "https://www.na-kd.com/en/products/wool-blend-fringe-detail-coat-camel-1859-000001-0124",
+ "gender": "female",
+ "sizes": ["xs","s","m","l"]
+ }
+},
+{
+"item_id": "1-1859-000000-5786",
+"title": "Corduroy Detail Jacket",
+"brand": "Olivia TPS x NA-KD",
+"price_usd": 139.95,
+"image_url": "https://www.na-kd.com/cdn-cgi/image/width=300,quality=80,sharpen=0.3/globalassets/corduroy_detail_jacket_1859-000000-5786_4_campaign.jpg?ref=91FC6664BD",
+"category": "jacket",
+"tags": ["beige","print"],
+"attributes": {
+ "color": "Beige Print",
+ "product_url": "https://www.na-kd.com/en/products/corduroy-detail-jacket-beige-print-1859-000000-5786",
+ "gender": "female",
+ "sizes": ["s","m","l"]
+ }
+},
+{
+"item_id": "1-1100-010799-0315",
+"title": "Suede Jacket",
+"brand": "",
+"price_usd": 309.95,
+"image_url": "https://www.na-kd.com/cdn-cgi/image/width=300,quality=80,sharpen=0.3/globalassets/suede_jacket-1100-010799-0315_campaign_2.jpg?ref=392817AF74",
+"category": "jacket",
+"tags": ["cognac","brown"],
+"attributes": {
+ "color": "Cognac",
+ "product_url": "https://www.na-kd.com/en/products/suede-jacket-cognac-1100-010799-0315",
+ "gender": "unisex",
+ "sizes": ["m","l","xl"]
+ }
+},
+{
+"item_id": "1-1100-009610-0017",
+"title": "Wool Blend Coat",
+"brand": "",
+"price_usd": 149.95,
+"image_url": "https://www.na-kd.com/cdn-cgi/image/width=300,quality=80,sharpen=0.3/globalassets/wool_blend_oversized_coat_1100-009610-0017_0023.jpg?ref=FB4DB73E4B",
+"category": "coat",
+"tags": ["brown","black","dark_grey"],
+"attributes": {
+ "color": "Brown",
+ "product_url": "https://www.na-kd.com/en/products/wool-blend-oversized-coat-brown-1100-009610-0017",
+ "gender": "female",
+ "sizes": ["s","m","l","xl"]
+ }
+},
+{
+"item_id": "1-1859-000013-0017",
+"title": "Regular Fit Blazer With Check Details",
+"brand": "Olivia TPS x NA-KD",
+"price_usd": 99.95,
+"image_url": "https://www.na-kd.com/cdn-cgi/image/width=300,quality=80,sharpen=0.3/globalassets/regular_fit_checked_detail_blazer_1859-000013-0017_82_campaign.jpg?ref=64B5DEB655",
+"category": "blazer",
+"tags": ["checkered","brown"],
+"attributes": {
+ "color": "Brown",
+ "product_url": "https://www.na-kd.com/en/products/regular-fit-checked-detail-blazer-brown-1859-000013-0017",
+ "gender": "female",
+ "sizes": ["xs","s","m"]
+ }
+},
+{
+"item_id": "1-1100-010184-0001",
+"title": "Sculpted Blazer",
+"brand": "",
+"price_usd": 99.95,
+"image_url": "https://www.na-kd.com/cdn-cgi/image/width=300,quality=80,sharpen=0.3/globalassets/emmaaavo__1100-010184-0001_social.jpg?ref=7354A91A47",
+"category": "blazer",
+"tags": ["white","black","brown"],
+"attributes": {
+ "color": "White",
+ "product_url": "https://www.na-kd.com/en/products/sculpted-blazer-white-1100-010184-0001",
+ "gender": "female",
+ "sizes": ["xs","s","m","l"]
+ }
+},
+{
+"item_id": "1-1018-008235-1230",
+"title": "Low Waist Jeans",
+"brand": "",
+"price_usd": 75.95,
+"image_url": "https://www.na-kd.com/cdn-cgi/image/width=300,quality=80,sharpen=0.3/globalassets/low_waist_jeans-1018-008235-12305591649.jpg?ref=36AC67832F",
+"category": "jeans",
+"tags": ["dark_grey","blue","black"],
+"attributes": {
+ "color": "DK Grey",
+ "product_url": "https://www.na-kd.com/en/products/super-low-waist-y2k-jeans-dk-grey-1018-008235-1230",
+ "gender": "female",
+ "sizes": ["xs","s","m","l","xl"]
+ }
+},
+{
+"item_id": "1-1100-009610-0002",
+"title": "Wool Blend Coat",
+"brand": "",
+"price_usd": 149.95,
+"image_url": "https://www.na-kd.com/cdn-cgi/image/width=300,quality=80,sharpen=0.3/globalassets/wool_blend_oversized_coat_1100-009610-0002_0040.jpg?ref=AA6F76D7EB",
+"category": "coat",
+"tags": ["black","brown","dark_grey"],
+"attributes": {
+ "color": "Black",
+ "product_url": "https://www.na-kd.com/en/products/wool-blend-oversized-coat-black-1100-009610-0002",
+ "gender": "unisex",
+ "sizes": ["s","m","l","xl"]
+ }
+},
+{
+"item_id": "1-1708-000079-1844",
+"title": "Oversized Long Trenchcoat",
+"brand": "Josefine HJ x NA-KD",
+"price_usd": 149.95,
+"image_url": "https://www.na-kd.com/cdn-cgi/image/width=300,quality=80,sharpen=0.3/globalassets/oversized_long_trenchcoat_1708-000079-1844_0033.jpg?ref=62108E6F4C",
+"category": "trenchcoat",
+"tags": ["dark_beige","grey"],
+"attributes": {
+ "color": "Dark Beige",
+ "product_url": "https://www.na-kd.com/en/products/oversized-long-trenchcoat-dark-beige-1708-000079-1844",
+ "gender": "unisex",
+ "sizes": ["m","l","xl"]
+ }
+},
+{
+"item_id": "1-1100-010184-0002",
+"title": "Sculpted Blazer",
+"brand": "",
+"price_usd": 99.95,
+"image_url": "https://www.na-kd.com/cdn-cgi/image/width=300,quality=80,sharpen=0.3/globalassets/sculpted_blazer_1100-010184-0002embroderied_maxi_skirt_1100-010545-000219173.jpg?ref=B5E09A8B70",
+"category": "blazer",
+"tags": ["black","white","brown"],
+"attributes": {
+ "color": "Black",
+ "product_url": "https://www.na-kd.com/en/products/sculpted-blazer-black-1100-010184-0002",
+ "gender": "female",
+ "sizes": ["xs","s","m","l"]
+ }
+}
 ]

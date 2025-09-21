@@ -1,14 +1,23 @@
+"use client";
+
+import { useCartStore } from "../../lib/store";
+
 const CartList = () => {
+  const cart = useCartStore((state) => state.cart);
+
+  if (!cart.length) {
+    return <p className="text-sm text-gray-500">Your cart is empty.</p>;
+  }
+
   return (
-    <ul className="space-y-4">
-      {/* Placeholder for cart items */}
-      {[...Array(3)].map((_, index) => (
+    <ul className="space-y-3">
+      {cart.map((entry) => (
         <li
-          key={index}
-          className="p-4 bg-gray-100 rounded-md shadow-md flex justify-between items-center"
+          key={entry.item.item_id}
+          className="flex items-center justify-between rounded-md bg-gray-100 px-4 py-3 text-sm shadow"
         >
-          <span>Cart Item {index + 1}</span>
-          <span>Qty: 1</span>
+          <span className="font-medium text-gray-800">{entry.item.title}</span>
+          <span className="text-gray-600">Qty: {entry.qty}</span>
         </li>
       ))}
     </ul>
