@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGesture } from "@use-gesture/react";
 import { AnimatePresence, motion } from "framer-motion";
 import ProductCard from "./ProductCard";
@@ -29,11 +29,34 @@ const SwipeDeck = ({
   const [leavingItemId, setLeavingItemId] = useState<string | null>(null);
   const currentItem = items[currentIndex];
 
+  const previousItemsRef = useRef<{ firstId: string | null; length: number }>(
+    { firstId: null, length: 0 }
+  );
+
   useEffect(() => {
-    setCurrentIndex(0);
+    const previous = previousItemsRef.current;
+    const currentFirstId = items[0]?.item_id ?? null;
+    const currentLength = items.length;
+    const isInitial = previous.length === 0;
+    const lengthReduced = currentLength < previous.length;
+    const firstChanged = currentFirstId !== previous.firstId;
+    const resetNeeded = isInitial || lengthReduced || firstChanged;
+
+    if (resetNeeded) {
+      setCurrentIndex(0);
+    } else {
+      setCurrentIndex((prev) => {
+        if (prev >= currentLength) {
+          return Math.max(currentLength - 1, 0);
+        }
+        return prev;
+      });
+    }
+
     setLeavingDirection(null);
     setLeavingItemId(null);
-    console.log("[SwipeDeck] received new items", { count: items.length });
+    console.log("[SwipeDeck] received new items", { count: currentLength, resetNeeded });
+    previousItemsRef.current = { firstId: currentFirstId, length: currentLength };
   }, [items]);
 
   console.log("[SwipeDeck] render", {
@@ -123,7 +146,8 @@ const SwipeDeck = ({
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       tabIndex={0}
-      role="presentation"
+      role="region"
+      aria-label="Swipe deck. Tap left to dislike, right to like. Use left and right arrows."
     >
       <AnimatePresence mode="wait">
         {currentItem && (
@@ -134,18 +158,19 @@ const SwipeDeck = ({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: exitX, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 30 }}
-            {...bind()}
           >
-            <ProductCard
-              item={currentItem}
-              onAddToCart={() => onAddToCart?.(currentItem)}
-              onShare={() => onShare?.(currentItem)}
-            />
-            <Overlays
-              direction={
-                leavingItemId === currentItem.item_id ? leavingDirection : null
-              }
-            />
+            <div className="flex h-full w-full" {...bind()}>
+              <ProductCard
+                item={currentItem}
+                onAddToCart={() => onAddToCart?.(currentItem)}
+                onShare={() => onShare?.(currentItem)}
+              />
+              <Overlays
+                direction={
+                  leavingItemId === currentItem.item_id ? leavingDirection : null
+                }
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

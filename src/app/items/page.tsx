@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import SwipeDeck from "../../components/SwipeDeck/SwipeDeck";
-import { Item } from "../../lib/events";
+import { Item, UserEvent } from "../../lib/events";
 import { fetchNextItems, emitShare, sendFeedback } from "../../lib/recs";
 import { useCartStore, useLikesStore, useUserStore } from "../../lib/store";
 
-const DECK_SIZE = 10;
+const PACKET_SIZE = 5;
+const INITIAL_PACKET_COUNT = 2;
+const PREFETCH_SEED_COUNT = 3;
 const BASE_GENDERS = ["female", "male", "unisex"] as const;
 const BASE_SIZES = ["xs", "s", "m", "l", "xl", "xxl"];
 
@@ -29,6 +31,194 @@ const ItemsPage = () => {
     null | "gender" | "price" | "brand" | "size"
   >(null);
   const [tempPriceRange, setTempPriceRange] = useState<[number, number]>([0, 0]);
+  const servedIdsRef = useRef<Set<string>>(new Set());
+  const viewedIdsRef = useRef<Set<string>>(new Set());
+  const appendedRef = useRef(false);
+  const prefetchLockRef = useRef(false);
+  const queuedPacketsRef = useRef(0);
+  const sourceItemsRef = useRef<Item[]>([]);
+  const [deckCursor, setDeckCursor] = useState(0);
+  const deckCursorRef = useRef(0);
+  const swipeBufferRef = useRef<UserEvent[]>([]);
+
+  const getPriceBounds = useCallback((items: Item[]): [number, number] => {
+    if (!items.length) {
+      return [0, 0];
+    }
+
+    let min = items[0].price_usd;
+    let max = items[0].price_usd;
+
+    for (const item of items) {
+      const price = item.price_usd;
+      if (price < min) {
+        min = price;
+      }
+      if (price > max) {
+        max = price;
+      }
+    }
+
+    return [min, max];
+  }, []);
+
+  const dedupeItems = useCallback(
+    (existing: Item[], incoming: Item[], served: Set<string>) => {
+      if (!incoming.length) {
+        return [] as Item[];
+      }
+
+      const startIndex = Math.max(deckCursorRef.current, 0);
+      const existingIds = new Set(
+        existing.slice(startIndex).map((item) => item.item_id)
+      );
+      const unique: Item[] = [];
+
+      for (const item of incoming) {
+        const id = item.item_id;
+        if (!id || existingIds.has(id) || served.has(id)) {
+          continue;
+        }
+        existingIds.add(id);
+        served.add(id);
+        unique.push(item);
+      }
+
+      if (unique.length || served.size === 0) {
+        return unique;
+      }
+
+      served.clear();
+      const recycled: Item[] = [];
+      const recycledIds = new Set<string>();
+      const futureIds = new Set(
+        existing.slice(startIndex).map((item) => item.item_id)
+      );
+      for (const item of incoming) {
+        const id = item.item_id;
+        if (!id || recycledIds.has(id) || futureIds.has(id)) {
+          continue;
+        }
+        recycledIds.add(id);
+        served.add(id);
+        recycled.push(item);
+      }
+
+      if (recycled.length) {
+        return recycled;
+      }
+
+      return incoming.filter(
+        (item) => typeof item.item_id === "string" && item.item_id.length > 0
+      );
+    },
+    []
+  );
+
+  useEffect(() => {
+    deckCursorRef.current = deckCursor;
+  }, [deckCursor]);
+
+  useEffect(() => {
+    sourceItemsRef.current = sourceItems;
+  }, [sourceItems]);
+
+  const appendDeckItems = useCallback(
+    (incoming: Item[]) => {
+      if (!incoming.length) {
+        return;
+      }
+
+      setSourceItems((prev) => {
+        const unique = dedupeItems(prev, incoming, servedIdsRef.current);
+        if (!unique.length) {
+          console.log("[ItemsPage] prefetch yielded no new items", {
+            incoming: incoming.length,
+          });
+          return prev;
+        }
+
+        const next = [...prev, ...unique];
+        const bounds = getPriceBounds(next);
+        console.log("[ItemsPage] appended items", {
+          incoming: incoming.length,
+          appended: unique.length,
+          total: next.length,
+        });
+        setPriceBounds(bounds);
+        setFilters((prevFilters) => {
+          const usesDefaultBounds =
+            prevFilters.price[0] === priceBounds[0] &&
+            prevFilters.price[1] === priceBounds[1];
+          if (!usesDefaultBounds) {
+            return prevFilters;
+          }
+          return {
+            ...prevFilters,
+            price: bounds,
+          };
+        });
+        appendedRef.current = true;
+        return next;
+      });
+    },
+    [dedupeItems, getPriceBounds, priceBounds]
+  );
+
+  const flushPacketQueue = useCallback(async () => {
+    if (prefetchLockRef.current || !userId) {
+      return;
+    }
+
+    prefetchLockRef.current = true;
+    let seedSource = [...sourceItemsRef.current];
+    console.log("[ItemsPage] processing packet queue", {
+      queued: queuedPacketsRef.current,
+      seedSource: seedSource.length,
+    });
+
+    try {
+      while (queuedPacketsRef.current > 0) {
+        queuedPacketsRef.current -= 1;
+        const seedIds = seedSource
+          .slice(-PREFETCH_SEED_COUNT)
+          .map((item) => item.item_id)
+          .filter(Boolean);
+        const context = {
+          surface: "items",
+          ...(seedIds.length ? { seed_item_ids: seedIds } : {}),
+        };
+        const nextItems = await fetchNextItems(userId, PACKET_SIZE, context);
+        console.log("[ItemsPage] packet fetched", {
+          queuedRemaining: queuedPacketsRef.current,
+          received: nextItems.length,
+        });
+        if (!nextItems.length) {
+          queuedPacketsRef.current = 0;
+          break;
+        }
+        seedSource = [...seedSource, ...nextItems];
+        appendDeckItems(nextItems);
+      }
+    } catch (error) {
+      console.error("[ItemsPage] packet queue failed", error);
+    } finally {
+      prefetchLockRef.current = false;
+      if (queuedPacketsRef.current > 0) {
+        void flushPacketQueue();
+      }
+    }
+  }, [appendDeckItems, userId]);
+
+  const requestNextPacket = useCallback(() => {
+    if (!userId) {
+      return;
+    }
+    queuedPacketsRef.current += 1;
+    if (!prefetchLockRef.current) {
+      void flushPacketQueue();
+    }
+  }, [flushPacketQueue, userId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -37,20 +227,55 @@ const ItemsPage = () => {
     async function loadItems() {
       try {
         setLoading(true);
-        console.log("[ItemsPage] fetching recommendations", { deckSize: DECK_SIZE });
-        const nextItems = await fetchNextItems(userId, DECK_SIZE, { surface: "items" });
-        console.log("[ItemsPage] fetched recommendations", nextItems);
+        setDeckCursor(0);
+        servedIdsRef.current.clear();
+        viewedIdsRef.current.clear();
+        queuedPacketsRef.current = 0;
+        swipeBufferRef.current = [];
+        prefetchLockRef.current = false;
+        console.log("[ItemsPage] fetching initial packets", {
+          packets: INITIAL_PACKET_COUNT,
+          packetSize: PACKET_SIZE,
+        });
+
+        const aggregated: Item[] = [];
+        for (let index = 0; index < INITIAL_PACKET_COUNT; index += 1) {
+          const seedIds = aggregated
+            .slice(-PREFETCH_SEED_COUNT)
+            .map((item) => item.item_id)
+            .filter(Boolean);
+          const context = {
+            surface: "items",
+            ...(seedIds.length ? { seed_item_ids: seedIds } : {}),
+          };
+          const nextItems = await fetchNextItems(userId, PACKET_SIZE, context);
+          console.log("[ItemsPage] initial packet fetched", {
+            index,
+            received: nextItems.length,
+          });
+          if (!nextItems.length) {
+            break;
+          }
+          aggregated.push(...nextItems);
+        }
+
         if (isMounted) {
-          setSourceItems(nextItems.slice(0, DECK_SIZE));
-          const prices = nextItems.map((item) => item.price_usd);
-          const minPrice = Math.min(...prices);
-          const maxPrice = Math.max(...prices);
-          setPriceBounds([minPrice, maxPrice]);
+          const uniqueItems = dedupeItems([], aggregated, servedIdsRef.current);
+          console.log("[ItemsPage] initial packets processed", {
+            requestedPackets: INITIAL_PACKET_COUNT,
+            aggregated: aggregated.length,
+            accepted: uniqueItems.length,
+          });
+          setSourceItems(uniqueItems);
+          const bounds = getPriceBounds(uniqueItems);
+          setPriceBounds(bounds);
+          appendedRef.current = false;
+          viewedIdsRef.current.clear();
           setFilters((prev) => ({
             ...prev,
             price:
-              prev.price[0] === 0 && prev.price[1] === 0
-                ? [minPrice, maxPrice]
+              prev.price[0] === 0 && prev.price[1] === 0 && uniqueItems.length
+                ? bounds
                 : prev.price,
           }));
         }
@@ -58,6 +283,11 @@ const ItemsPage = () => {
         console.error("[ItemsPage] failed to load items", error);
         if (isMounted) {
           setSourceItems([]);
+          setPriceBounds([0, 0]);
+          servedIdsRef.current.clear();
+          viewedIdsRef.current.clear();
+          appendedRef.current = false;
+          setDeckCursor(0);
         }
       } finally {
         if (isMounted) {
@@ -71,7 +301,7 @@ const ItemsPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [userId]);
+  }, [dedupeItems, getPriceBounds, userId]);
 
   const likesCount = useMemo(() => likes.length, [likes]);
 
@@ -119,10 +349,54 @@ const ItemsPage = () => {
     });
   }, [sourceItems, filters, priceBounds]);
 
-  const deckItems = useMemo(
-    () => filteredItems.slice(0, DECK_SIZE),
-    [filteredItems]
+  const deckItems = filteredItems;
+
+  useEffect(() => {
+    if (appendedRef.current) {
+      appendedRef.current = false;
+      return;
+    }
+
+    setDeckCursor(0);
+  }, [deckItems]);
+
+  const advanceDeck = useCallback(() => {
+    setDeckCursor((prev) => prev + 1);
+  }, []);
+
+  const enqueueSwipeEvent = useCallback(
+    (event: UserEvent): boolean => {
+      swipeBufferRef.current.push(event);
+      if (swipeBufferRef.current.length >= PACKET_SIZE) {
+        const batch = swipeBufferRef.current.splice(0, PACKET_SIZE);
+        console.log("[ItemsPage] flushing swipe feedback", {
+          count: batch.length,
+        });
+        void sendFeedback(batch);
+        return true;
+      }
+      return false;
+    },
+    []
   );
+
+  useEffect(() => {
+    const currentItem = deckItems[deckCursor];
+    if (!currentItem || viewedIdsRef.current.has(currentItem.item_id)) {
+      return;
+    }
+
+    viewedIdsRef.current.add(currentItem.item_id);
+    void sendFeedback([
+      {
+        type: "detail_view",
+        user_id: userId,
+        item_id: currentItem.item_id,
+        surface: "items",
+        ts: Date.now(),
+      },
+    ]);
+  }, [deckCursor, deckItems, userId]);
 
   const genderOptions = useMemo(() => {
     const set = new Set<string>(BASE_GENDERS);
@@ -153,28 +427,32 @@ const ItemsPage = () => {
   const handleSwipeRight = (item: Item) => {
     console.log("[ItemsPage] swipe right", item);
     addLike(item);
-    void sendFeedback([
-      {
-        type: "swipe_like",
-        user_id: userId,
-        item_id: item.item_id,
-        surface: "items",
-        ts: Date.now(),
-      },
-    ]);
+    const shouldPrefetch = enqueueSwipeEvent({
+      type: "swipe_like",
+      user_id: userId,
+      item_id: item.item_id,
+      surface: "items",
+      ts: Date.now(),
+    });
+    advanceDeck();
+    if (shouldPrefetch) {
+      void requestNextPacket();
+    }
   };
 
   const handleSwipeLeft = (item: Item) => {
     console.log("[ItemsPage] swipe left", item);
-    void sendFeedback([
-      {
-        type: "swipe_dislike",
-        user_id: userId,
-        item_id: item.item_id,
-        surface: "items",
-        ts: Date.now(),
-      },
-    ]);
+    const shouldPrefetch = enqueueSwipeEvent({
+      type: "swipe_dislike",
+      user_id: userId,
+      item_id: item.item_id,
+      surface: "items",
+      ts: Date.now(),
+    });
+    advanceDeck();
+    if (shouldPrefetch) {
+      void requestNextPacket();
+    }
   };
 
   const handleAddToCart = (item: Item) => {
@@ -185,6 +463,8 @@ const ItemsPage = () => {
         type: "add_to_cart",
         user_id: userId,
         item_id: item.item_id,
+        quantity: 1,
+        surface: "items",
         ts: Date.now(),
       },
     ]);
@@ -192,12 +472,14 @@ const ItemsPage = () => {
 
   const handleShare = (item: Item) => {
     console.log("[ItemsPage] share", item);
-    void emitShare(userId, item.item_id);
+    void emitShare(userId, item.item_id, "items");
   };
 
   console.log("[ItemsPage] render", {
     loading,
     itemsCount: deckItems.length,
+    deckCursor,
+    prefetchLocked: prefetchLockRef.current,
   });
 
   const openModal = (modal: typeof activeModal) => {
@@ -328,11 +610,17 @@ const ItemsPage = () => {
       const [minValue, maxValue] = tempPriceRange;
 
       const handleMinChange = (value: number) => {
-        setTempPriceRange(([_, max]) => [Math.min(value, max), max]);
+        setTempPriceRange((prev) => {
+          const max = prev[1];
+          return [Math.min(value, max), max];
+        });
       };
 
       const handleMaxChange = (value: number) => {
-        setTempPriceRange(([min, _]) => [min, Math.max(value, min)]);
+        setTempPriceRange((prev) => {
+          const min = prev[0];
+          return [min, Math.max(value, min)];
+        });
       };
 
       return (

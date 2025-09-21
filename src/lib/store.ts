@@ -29,6 +29,7 @@ interface LikesState {
   likes: Item[];
   add: (item: Item) => void;
   remove: (id: string) => void;
+  clear: () => void;
 }
 
 export type CartEntry = {
@@ -81,6 +82,7 @@ export const useLikesStore = create(
         }),
       remove: (id: string) =>
         set((state) => ({ likes: state.likes.filter((item) => item.item_id !== id) })),
+      clear: () => set({ likes: [] }),
     }),
     { name: "likes-storage" }
   )

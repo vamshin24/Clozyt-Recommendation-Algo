@@ -23,6 +23,13 @@ export function incrementMetric(key: CounterKey, amount = 1) {
   metrics[key] += amount;
 }
 
+export function recordImpressions(count: number) {
+  if (count <= 0) {
+    return;
+  }
+  incrementMetric("impressions", count);
+}
+
 export function recordEvents(events: UserEvent[]) {
   for (const event of events) {
     switch (event.type) {

@@ -11,30 +11,74 @@ export type Item = {
   score?: number;
 };
 
+export type SwipeLikeEvent = {
+  type: "swipe_like";
+  user_id: string;
+  item_id: string;
+  ts: number;
+  surface: "items";
+};
+
+export type SwipeDislikeEvent = {
+  type: "swipe_dislike";
+  user_id: string;
+  item_id: string;
+  ts: number;
+  surface: "items";
+};
+
+export type DetailEvent = {
+  type: "detail_view";
+  user_id: string;
+  item_id: string;
+  ts: number;
+  surface?: "items" | "portfolio";
+};
+
+export type AddToCartEvent = {
+  type: "add_to_cart";
+  user_id: string;
+  item_id: string;
+  quantity: number;
+  ts: number;
+  surface: "items" | "portfolio";
+};
+
+export type PurchaseEvent = {
+  type: "purchase";
+  user_id: string;
+  cart_item_ids: string[];
+  ts: number;
+};
+
+export type ShareEvent = {
+  type: "share";
+  user_id: string;
+  item_id: string;
+  ts: number;
+  surface: "items" | "portfolio";
+};
+
+export type ProfileUpdateEvent = {
+  type: "profile_update";
+  user_id: string;
+  ts: number;
+  profile: {
+    name?: string;
+    email?: string;
+    gender?: "female" | "male" | "nonbinary" | "prefer_not";
+    age?: number;
+    budgetMin?: number;
+    budgetMax?: number;
+    styles?: string[];
+  };
+};
+
 export type UserEvent =
-  | { type: "swipe_like"; user_id: string; item_id: string; ts: number; surface: "items" }
-  | { type: "swipe_dislike"; user_id: string; item_id: string; ts: number; surface: "items" }
-  | { type: "detail_view"; user_id: string; item_id: string; ts: number }
-  | { type: "add_to_cart"; user_id: string; item_id: string; ts: number }
-  | { type: "purchase"; user_id: string; cart_item_ids: string[]; ts: number }
-  | {
-      type: "share";
-      user_id: string;
-      item_id: string;
-      ts: number;
-      surface: "items" | "portfolio";
-    }
-  | {
-      type: "profile_update";
-      user_id: string;
-      ts: number;
-      profile: {
-        name?: string;
-        email?: string;
-        gender?: "female" | "male" | "nonbinary" | "prefer_not";
-        age?: number;
-        budgetMin?: number;
-        budgetMax?: number;
-        styles?: string[];
-      };
-    };
+  | SwipeLikeEvent
+  | SwipeDislikeEvent
+  | DetailEvent
+  | AddToCartEvent
+  | PurchaseEvent
+  | ShareEvent
+  | ProfileUpdateEvent;

@@ -6,3 +6,40 @@ We have accomplished the following so far:
 - Installed runtime and development dependencies for the PWA.
 - Added initial source files and configurations for the project.
 - Implemented the basic UI in TypeScript in `src/app/`, using Next.js (App Router) with React hooks for mock `Item` data and Tailwind CSS utility classes to structure the header and deck layout around the `SwipeDeck` component.
+
+## Progress Update – Recommendations, Feedback, and Deck UX
+
+- Implemented API stubs for recommendations and event feedback:
+  - `src/app/api/recs/next/route.ts` returns mock recommendations (from `src/mock/items.json`) with per-item scores.
+  - `src/app/api/feedback/route.ts` accepts batched `UserEvent[]` and records simple in-memory metrics.
+- Added a lightweight metrics module (`src/lib/metrics.ts`) to track impressions and basic interaction counters.
+- Wired data fetching and feedback dispatch:
+  - `src/lib/recs.ts` now posts to the above endpoints (`fetchNextItems`, `sendFeedback`) and includes helpers for `share` and `instantBuy`.
+- Expanded state management with persisted Zustand stores (`src/lib/store.ts`) for user, likes (deduped), and cart (with quantities).
+- Upgraded the swipe deck UX & accessibility:
+  - `src/components/SwipeDeck/SwipeDeck.tsx` supports gesture + keyboard swipes and exposes callbacks for like/dislike, add-to-cart, and share.
+  - `src/components/SwipeDeck/ProductCard.tsx` uses Next/Image with `fill`/`sizes`, shows currency + brand fallback, and adds Add to Cart/Share buttons.
+- Connected the Items page to recommendations and feedback:
+  - `src/app/items/page.tsx` fetches a deck from `fetchNextItems`, provides filter modals (gender/price/brand/size), and emits feedback on interactions.
+- Configured remote image domains in `next.config.ts` for Unsplash and NA‑KD so remote product images render.
+
+
+
+## Progress Update – PWA, Prefetch, A11y, Events
+
+- Enabled `next-pwa` in `next.config.ts` with production-only service worker, Workbox runtime caching for navigation, APIs, and remote images, and kept existing `images.remotePatterns`.
+- Added typed declaration for `next-pwa` to unblock TypeScript and ensure config stays strongly typed.
+- Tuned the items deck to prefetch additional recommendations (seeded by the last few item ids) when the remaining cards drop below a threshold, deduping new results against served ids.
+- Emit `detail_view` feedback once per surfaced item and ensure add-to-cart payloads include `quantity` + `surface` for the analytics pipeline.
+- Kept overlays visually unchanged while making them screen-reader friendly with `role="status"`, assertive live region, and hidden text labels.
+Notes/TODOs:
+- Monitor PWA runtime caching coverage once real APIs are wired up.
+- Expand event surfaces (e.g., portfolio detail views) if analytics needs grow.
+## Progress Update – Vector Search Integration & Data Pipeline
+
+- Swapped the items endpoint to stream Qdrant search results (`src/app/api/recs/next/route.ts`) and added packet assembly logic that blends deterministic top-M picks with sampled exploration, dedupes seen ids, and tracks per-user history in `src/lib/server/state.ts`.
+- Batched feedback flows now normalize both legacy and rating-based payloads, resolve vectors via Qdrant, and update user centroids/adaptive top-M in `src/lib/server/engine.ts`; events buffer until five interactions to reduce churn.
+- Introduced a thin server SDK (`src/lib/server/*`) for env management, vector math, Qdrant access, and shared types; added a local LRU to suppress resurfacing of recently served items.
+- Refreshed the items deck: client keeps a sliding source buffer with dedupe/seed logic, prefetch locks, and delayed swipe flushes; new detail view pings fire once per item, and lists gained clear/remove affordances.
+- Enabled full PWA experience (runtime caching, manifest + icons, install hooks) and added `ClearPersistedState` to wipe incompatible localStorage across deploys.
+- Added `scripts/embed_and_upsert.py` and `docker-compose.yml` to stand up Qdrant locally, embed Fashion-CLIP vectors, and upsert payloads; documented setup in `README.md`.
